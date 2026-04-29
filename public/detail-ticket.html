@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detail Film — CineTix</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Bebas Neue', 'cursive'],
+            body: ['DM Sans', 'sans-serif'],
+          },
+          colors: {
+            cinema: {
+              bg:     '#080810',
+              card:   '#0f0f1a',
+              card2:  '#12121f',
+              border: '#1a1a2e',
+              red:    '#e63946',
+              gold:   '#f4a261',
+              blue:   '#457b9d',
+            }
+          },
+          animation: {
+            'shimmer': 'shimmer 2s linear infinite',
+            'float':   'float 6s ease-in-out infinite',
+            'fadeUp':  'fadeUp 0.6s ease forwards',
+          },
+          keyframes: {
+            shimmer: {
+              '0%':   { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition:  '200% 0' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%':      { transform: 'translateY(-8px)' },
+            },
+            fadeUp: {
+              from: { opacity: '0', transform: 'translateY(24px)' },
+              to:   { opacity: '1', transform: 'translateY(0)' },
+            },
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: #080810;
+      font-family: 'DM Sans', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /*  Grain overlay  */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999; opacity: 0.3;
+    }
+
+    /*  Scrollbar  */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #080810; }
+    ::-webkit-scrollbar-thumb { background: #e63946; border-radius: 2px; }
+
+    .font-display { font-family: 'Bebas Neue', cursive; letter-spacing: 0.05em; }
+
+    /*  Navbar  */
+    #navbar {
+      transition: background 0.3s ease, backdrop-filter 0.3s ease;
+    }
+    #navbar.scrolled {
+      background: rgba(8,8,16,0.95) !important;
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /*  Hero backdrop  */
+    .hero-backdrop {
+      position: absolute; inset: 0;
+      background-size: cover;
+      background-position: center top;
+      filter: blur(60px) brightness(0.25) saturate(1.4);
+      transform: scale(1.1);
+      z-index: 0;
+    }
+    .hero-gradient {
+      position: absolute; inset: 0; z-index: 1;
+      background: linear-gradient(
+        to bottom,
+        rgba(8,8,16,0.3) 0%,
+        rgba(8,8,16,0.5) 40%,
+        rgba(8,8,16,0.95) 80%,
+        #080810 100%
+      );
+    }
+
+    /*  Poster shadow glow  */
+    .poster-glow {
+      box-shadow:
+        0 0 0 1px rgba(230,57,70,0.15),
+        0 30px 60px -15px rgba(0,0,0,0.9),
+        0 0 80px -20px rgba(230,57,70,0.25);
+    }
+    .poster-wrap {
+      transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .poster-wrap:hover { transform: translateY(-6px) scale(1.015); }
+
+    /*  Badge  */
+    .badge-genre {
+      font-size: 10px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    /*  Text gradient  */
+    .text-gradient {
+      background: linear-gradient(135deg, #e63946 0%, #f4a261 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /*  Stars  */
+    .stars { color: #f4a261; }
+
+    /*  Rating bar  */
+    .rating-bar-fill {
+      height: 4px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #e63946, #f4a261);
+      transition: width 1s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    /*  Date buttons  */
+    .date-btn {
+      position: relative;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 12px 10px;
+      border-radius: 16px;
+      border: 1px solid #1a1a2e;
+      background: #0f0f1a;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+      min-width: 60px;
+      overflow: hidden;
+    }
+    .date-btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(230,57,70,0.08), rgba(244,162,97,0.05));
+      opacity: 0; transition: opacity 0.25s ease;
+    }
+    .date-btn:hover { border-color: rgba(230,57,70,0.4); transform: translateY(-2px); }
+    .date-btn:hover::before { opacity: 1; }
+    .date-btn.active {
+      border-color: #e63946;
+      background: rgba(230,57,70,0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px -8px rgba(230,57,70,0.4), 0 0 0 1px rgba(230,57,70,0.2);
+    }
+    .date-btn.active::before { opacity: 1; }
+    .date-btn .day-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; color: #6b7280;
+      transition: color 0.2s; margin-bottom: 4px;
+    }
+    .date-btn .date-num {
+      font-size: 22px; font-weight: 700; color: #e2e8f0;
+      transition: color 0.2s; line-height: 1;
+    }
+    .date-btn .month-label {
+      font-size: 10px; font-weight: 500; color: #4b5563;
+      transition: color 0.2s; margin-top: 2px;
+    }
+    .date-btn.active .day-label  { color: #f4a261; }
+    .date-btn.active .date-num   { color: #fff; }
+    .date-btn.active .month-label{ color: #e63946; }
+    .date-btn .active-dot {
+      position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #e63946;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .date-btn.active .active-dot { opacity: 1; }
+
+    /*  Time buttons  */
+    .time-btn {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid #1a1a2e;
+      background: #0f0f1a;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+      font-weight: 600; font-size: 14px; color: #9ca3af;
+    }
+    .time-btn:hover {
+      border-color: rgba(69,123,157,0.5);
+      color: #e2e8f0;
+      transform: translateY(-1px);
+      background: rgba(69,123,157,0.08);
+    }
+    .time-btn.active {
+      border-color: #457b9d;
+      background: rgba(69,123,157,0.15);
+      color: #fff;
+      box-shadow: 0 4px 16px -4px rgba(69,123,157,0.4), 0 0 0 1px rgba(69,123,157,0.2);
+      transform: translateY(-1px);
+    }
+    .time-btn.active .time-icon { color: #457b9d; }
+    .time-btn.sold-out {
+      opacity: 0.35; cursor: not-allowed; pointer-events: none;
+      text-decoration: line-through;
+    }
+    .time-btn .time-tag {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.6px;
+      text-transform: uppercase; padding: 2px 6px;
+      border-radius: 6px; background: rgba(230,57,70,0.15);
+      color: #e63946;
+    }
+    .time-btn .time-tag.green {
+      background: rgba(52,211,153,0.12);
+      color: #34d399;
+    }
+
+    /*  CTA Button  */
+    .btn-cta {
+      position: relative; overflow: hidden;
+      padding: 16px 32px;
+      border-radius: 16px;
+      font-weight: 700; font-size: 15px;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .btn-cta::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(255,255,255,0.15), transparent 60%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .btn-cta:hover::after { opacity: 1; }
+    .btn-cta:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      transform: none !important;
+    }
+    .btn-cta:not(:disabled):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 40px -10px rgba(230,57,70,0.5);
+    }
+    .btn-cta:not(:disabled):active { transform: translateY(0); }
+
+    /*  Section label  */
+    .section-label {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .section-label .num {
+      width: 26px; height: 26px; border-radius: 8px;
+      background: linear-gradient(135deg, #e63946, #c0303c);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #fff;
+    }
+    .section-label .title {
+      font-weight: 700; font-size: 15px; color: #e2e8f0;
+      letter-spacing: 0.2px;
+    }
+
+    /*  Info pill  */
+    .info-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .info-pill .label {
+      font-size: 11px; color: #6b7280; text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 600;
+    }
+    .info-pill .value {
+      font-size: 13px; font-weight: 600; color: #e2e8f0;
+    }
+
+    /*  Seat summary card  */
+    .summary-card {
+      background: #0f0f1a;
+      border: 1px solid #1a1a2e;
+      border-radius: 20px;
+      padding: 20px;
+      position: sticky; top: 88px;
+    }
+
+    /*  Synopsis expand  */
+    .synopsis-text {
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+    .synopsis-text.expanded {
+      display: block;
+      -webkit-line-clamp: unset;
+    }
+
+    /*  Related movie card  */
+    .related-card {
+      transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+    }
+    .related-card:hover { transform: translateY(-6px); }
+    .related-card:hover .related-poster { transform: scale(1.06); }
+    .related-poster { transition: transform 0.5s ease; }
+
+    /*  Scroll container  */
+    .scroll-x {
+      overflow-x: auto; scrollbar-width: none;
+      scroll-snap-type: x mandatory; display: flex; gap: 10px;
+    }
+    .scroll-x::-webkit-scrollbar { display: none; }
+    .scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }
+
+    /*  Reveal animations  */
+    .reveal { opacity: 0; transform: translateY(28px); }
+
+    /*  Mobile menu  */
+    #mobile-menu {
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.77, 0, 0.175, 1);
+    }
+    #mobile-menu.open { transform: translateX(0); }
+
+    /*  Progress ring  */
+    .progress-ring-circle {
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+      transform: rotate(-90deg); transform-origin: 50% 50%;
+    }
+
+    /*  Divider  */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+    }
+
+    /*  Film strip border  */
+    .film-strip-top {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: repeating-linear-gradient(
+        90deg,
+        #e63946 0px, #e63946 16px, transparent 16px, transparent 22px
+      );
+      opacity: 0.5;
+    }
+
+    /*  Tooltip  */
+    [data-tooltip] { position: relative; }
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute; bottom: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a2e; color: #e2e8f0;
+      font-size: 11px; white-space: nowrap;
+      padding: 4px 10px; border-radius: 8px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    [data-tooltip]:hover::after { opacity: 1; }
+  </style>
+</head>
+
+<body>
+
+<!-- NAVBAR  -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-4">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+
+    <!-- Logo -->
+    <a href="index.html" class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-xl bg-cinema-red flex items-center justify-center shadow-lg shadow-red-600/30">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+          <path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
+        </svg>
+      </div>
+      <span class="font-display text-2xl text-white tracking-wider">CineTix</span>
+    </a>
+
+    <!-- Desktop nav -->
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Film</a>
+      <a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Event</a>
+      <a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Promo</a>
+      <a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Tentang</a>
+    </div>
+
+    <!-- Right actions -->
+    <div class="flex items-center gap-3">
+      <button class="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border border-cinema-border text-sm text-gray-400 hover:text-white hover:border-white/20 transition-all">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Cari film...
+      </button>
+      <button class="w-9 h-9 rounded-xl border border-cinema-border bg-cinema-card flex items-center justify-center hover:border-white/20 transition-colors relative">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-cinema-red rounded-full"></span>
+      </button>
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-cinema-red to-cinema-gold flex items-center justify-center text-xs font-bold text-white cursor-pointer">
+        A
+      </div>
+      <!-- Mobile hamburger -->
+      <button onclick="toggleMenu()" class="md:hidden w-9 h-9 rounded-xl border border-cinema-border bg-cinema-card flex items-center justify-center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile menu -->
+<div id="menu-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="toggleMenu()"></div>
+<div id="mobile-menu" class="fixed top-0 right-0 bottom-0 z-50 w-72 bg-cinema-card border-l border-cinema-border p-6">
+  <div class="flex items-center justify-between mb-8">
+    <span class="font-display text-xl text-white">Menu</span>
+    <button onclick="toggleMenu()" class="w-8 h-8 rounded-lg border border-cinema-border flex items-center justify-center">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="space-y-1">
+    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-white/5 hover:text-white transition-all">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Film
+    </a>
+    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-white/5 hover:text-white transition-all">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      Event
+    </a>
+    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-white/5 hover:text-white transition-all">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Promo
+    </a>
+  </div>
+</div>
+
+
+<!-- HERO BACKDROP  -->
+<div class="relative overflow-hidden" style="height: 520px;">
+  <div class="hero-backdrop" id="hero-backdrop"
+       style="background-image: url('https://image.tmdb.org/t/p/original/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg')">
+  </div>
+  <div class="hero-gradient"></div>
+
+  <!-- Breadcrumb -->
+  <div class="relative z-10 pt-24 px-4 md:px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center gap-2 text-xs text-gray-500">
+        <a href="index.html" class="hover:text-gray-300 transition-colors">Beranda</a>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+        <a href="#" class="hover:text-gray-300 transition-colors">Film</a>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+        <span class="text-gray-400">Interstellar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom fade handled by gradient -->
+</div>
+
+
+<!-- MAIN CONTENT -->
+<div class="max-w-7xl mx-auto px-4 md:px-8 -mt-64 relative z-10 pb-20">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+    <!-- LEFT: Poster + quick actions -->
+    <div class="lg:col-span-1">
+      <!-- Poster -->
+      <div class="poster-wrap reveal" style="animation-delay:0.1s">
+        <div class="relative rounded-2xl overflow-hidden poster-glow" style="aspect-ratio: 2/3;">
+          <div class="film-strip-top"></div>
+          <img id="main-poster"
+               src="assets/img/interstellar.png"
+               alt="Poster Film"
+               class="w-full h-full object-cover"
+               onerror="this.src='https://placehold.co/400x600/0f0f1a/e2e8f0?text=Poster'"/>
+          <!-- Overlay bottom -->
+          <div class="absolute bottom-0 left-0 right-0 h-24
+                      bg-gradient-to-t from-cinema-card to-transparent"></div>
+          <!-- Age rating badge -->
+          <div class="absolute top-3 right-3 w-10 h-10 rounded-xl
+                      bg-cinema-red/90 backdrop-blur-sm
+                      flex items-center justify-center
+                      font-display text-white text-base leading-none shadow-lg shadow-red-600/30">
+            13+
+          </div>
+          <!-- Format badge -->
+          <div class="absolute top-3 left-3 px-2.5 py-1.5 rounded-xl
+                      bg-black/60 backdrop-blur-md
+                      text-xs font-bold text-cinema-gold tracking-wider">
+            IMAX 2D
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons (below poster) -->
+      <div class="mt-4 grid grid-cols-3 gap-2 reveal" style="animation-delay:0.15s">
+        <button class="flex flex-col items-center gap-1.5 p-3 rounded-xl
+                       border border-cinema-border bg-cinema-card
+                       text-gray-400 hover:text-white hover:border-white/20
+                       transition-all text-xs font-medium">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          Simpan
+        </button>
+        <button class="flex flex-col items-center gap-1.5 p-3 rounded-xl
+                       border border-cinema-border bg-cinema-card
+                       text-gray-400 hover:text-white hover:border-white/20
+                       transition-all text-xs font-medium">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Bagikan
+        </button>
+        <button onclick="openTrailer()" class="flex flex-col items-center gap-1.5 p-3 rounded-xl
+                       border border-cinema-border bg-cinema-card
+                       text-gray-400 hover:text-white hover:border-white/20
+                       transition-all text-xs font-medium">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5,3 19,12 5,21"/>
+          </svg>
+          Trailer
+        </button>
+      </div>
+
+      <!-- Crew info card -->
+      <div class="mt-4 p-4 rounded-2xl border border-cinema-border bg-cinema-card reveal" style="animation-delay:0.2s">
+        <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-3">Kru Utama</p>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-400">Sutradara</span>
+            <span class="text-xs font-semibold text-white">Christopher Nolan</span>
+          </div>
+          <div class="divider"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-400">Produser</span>
+            <span class="text-xs font-semibold text-white">Emma Thomas</span>
+          </div>
+          <div class="divider"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-400">Studio</span>
+            <span class="text-xs font-semibold text-white">Paramount</span>
+          </div>
+          <div class="divider"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-400">Bahasa</span>
+            <span class="text-xs font-semibold text-white">Inggris / Subtitle ID</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+
+    <!-- 
+         RIGHT: Film info + booking
+     -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!--  FILM INFO  -->
+      <div class="reveal" style="animation-delay:0.05s">
+
+        <!-- Genre badges -->
+        <div class="flex flex-wrap gap-2 mb-4">
+          <span class="badge-genre bg-cinema-red/10 text-cinema-red border border-cinema-red/20">Sci-Fi</span>
+          <span class="badge-genre bg-cinema-blue/10 text-cinema-blue border border-cinema-blue/20">Adventure</span>
+          <span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Drama</span>
+          <span class="badge-genre bg-cinema-gold/10 text-cinema-gold border border-cinema-gold/20">Epic</span>
+        </div>
+
+        <!-- Title -->
+        <h1 class="font-display text-5xl md:text-7xl text-white leading-none tracking-wide mb-2">
+          INTERSTELLAR
+        </h1>
+        <p class="text-gray-500 text-sm mb-5 italic">A Journey Beyond Time and Space</p>
+
+        <!-- Meta row -->
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+          <!-- Rating -->
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl
+                      bg-cinema-gold/10 border border-cinema-gold/20">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#f4a261" class="stars">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="font-bold text-cinema-gold text-sm">8.7</span>
+            <span class="text-gray-500 text-xs">/10</span>
+          </div>
+          <!-- Duration -->
+          <div class="flex items-center gap-1.5 text-sm text-gray-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            169 menit
+          </div>
+          <span class="text-gray-600">·</span>
+          <!-- Year -->
+          <span class="text-sm text-gray-400">2014</span>
+          <span class="text-gray-600">·</span>
+          <!-- Views -->
+          <div class="flex items-center gap-1.5 text-sm text-gray-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            12.4K ditonton
+          </div>
+        </div>
+
+        <!-- Price -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="px-4 py-2.5 rounded-xl bg-cinema-red/10 border border-cinema-red/20">
+            <p class="text-xs text-gray-500 mb-0.5">Mulai dari</p>
+            <p class="font-bold text-lg text-cinema-red">Rp 35.000</p>
+          </div>
+          <div class="text-gray-600">—</div>
+          <div class="px-4 py-2.5 rounded-xl bg-cinema-gold/10 border border-cinema-gold/20">
+            <p class="text-xs text-gray-500 mb-0.5">Hingga</p>
+            <p class="font-bold text-lg text-cinema-gold">Rp 85.000</p>
+          </div>
+          <div class="hidden md:flex px-3 py-2.5 rounded-xl bg-white/5 border border-cinema-border
+                      items-center gap-2 text-xs text-gray-400">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/>
+              <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+              <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+            </svg>
+            Harga tergantung tipe kursi & studio
+          </div>
+        </div>
+
+        <!-- Synopsis -->
+        <div class="p-5 rounded-2xl bg-cinema-card border border-cinema-border mb-1">
+          <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-3">Sinopsis</p>
+          <p id="synopsis-text" class="synopsis-text text-sm text-gray-300 leading-relaxed">
+            Di masa depan yang tak jauh, Bumi terancam punah akibat gagal panen masif dan badai debu yang terus mengikis atmosfer. Cooper (Matthew McConaughey), seorang mantan pilot NASA yang kini menjadi petani, tanpa sengaja menemukan koordinat tersembunyi yang membawanya ke sebuah instalasi rahasia NASA.
+            Di sana, ia bertemu ilmuwan visioner, Prof. Brand (Michael Caine), yang sedang merancang misi terakhir umat manusia: melewati lubang cacing dekat Saturnus untuk menemukan planet baru yang layak huni.
+            Meninggalkan putrinya Murph yang masih kecil, Cooper memimpin tim menjelajahi galaksi lain — menghadapi dilasi waktu yang mengerikan, relativitas ekstrem, dan pilihan moral yang menghancurkan. Sebuah epos tentang cinta, waktu, dan kelangsungan umat manusia.
+          </p>
+          <button id="synopsis-toggle" onclick="toggleSynopsis()"
+                  class="mt-3 text-xs font-semibold text-cinema-red hover:text-red-400 transition-colors flex items-center gap-1">
+            Baca selengkapnya
+            <svg id="synopsis-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Info pills row -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+          <div class="info-pill flex-col items-start">
+            <span class="label">Studio</span>
+            <span class="value">IMAX · 2D · 3D</span>
+          </div>
+          <div class="info-pill flex-col items-start">
+            <span class="label">Tayang</span>
+            <span class="value">Mulai 29 Apr</span>
+          </div>
+          <div class="info-pill flex-col items-start">
+            <span class="label">Status</span>
+            <span class="value text-green-400 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"></span>
+              Tayang
+            </span>
+          </div>
+          <div class="info-pill flex-col items-start">
+            <span class="label">Tiket Tersisa</span>
+            <span class="value text-cinema-gold">83 kursi</span>
+          </div>
+        </div>
+
+        <!-- Cast -->
+        <div class="mt-5">
+          <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-3">Pemeran Utama</p>
+          <div class="flex gap-3 overflow-x-auto scroll-x pb-1">
+            <div class="flex flex-col items-center gap-2 min-w-[64px]">
+              <div class="w-14 h-14 rounded-2xl overflow-hidden border-2 border-cinema-border">
+                <img src="https://image.tmdb.org/t/p/w185/xlPFcxhpCdKvZkNzAjMfJlGlSv4.jpg"
+                     alt="Matthew" class="w-full h-full object-cover"
+                     onerror="this.src='https://placehold.co/56x56/1a1a2e/e2e8f0?text=M'"/>
+              </div>
+              <span class="text-[10px] text-gray-400 text-center leading-tight">Matthew<br>McConaughey</span>
+            </div>
+            <div class="flex flex-col items-center gap-2 min-w-[64px]">
+              <div class="w-14 h-14 rounded-2xl overflow-hidden border-2 border-cinema-border">
+                <img src="https://image.tmdb.org/t/p/w185/esqPArspKMeIZojbERQkFNdnCsn.jpg"
+                     alt="Anne" class="w-full h-full object-cover"
+                     onerror="this.src='https://placehold.co/56x56/1a1a2e/e2e8f0?text=A'"/>
+              </div>
+              <span class="text-[10px] text-gray-400 text-center leading-tight">Anne<br>Hathaway</span>
+            </div>
+            <div class="flex flex-col items-center gap-2 min-w-[64px]">
+              <div class="w-14 h-14 rounded-2xl overflow-hidden border-2 border-cinema-border">
+                <img src="https://image.tmdb.org/t/p/w185/etFi81h1Wy6FrOAoxdqfKMF5KlP.jpg"
+                     alt="Jessica" class="w-full h-full object-cover"
+                     onerror="this.src='https://placehold.co/56x56/1a1a2e/e2e8f0?text=J'"/>
+              </div>
+              <span class="text-[10px] text-gray-400 text-center leading-tight">Jessica<br>Chastain</span>
+            </div>
+            <div class="flex flex-col items-center gap-2 min-w-[64px]">
+              <div class="w-14 h-14 rounded-2xl overflow-hidden border-2 border-cinema-border">
+                <img src="https://image.tmdb.org/t/p/w185/6Fs0xc9bTEYLmYQGVLk5xSAh5YK.jpg"
+                     alt="Michael" class="w-full h-full object-cover"
+                     onerror="this.src='https://placehold.co/56x56/1a1a2e/e2e8f0?text=M'"/>
+              </div>
+              <span class="text-[10px] text-gray-400 text-center leading-tight">Michael<br>Caine</span>
+            </div>
+            <div class="flex flex-col items-center gap-2 min-w-[64px]">
+              <div class="w-14 h-14 rounded-2xl overflow-hidden border-2 border-cinema-border bg-cinema-border
+                          flex items-center justify-center text-xs text-gray-500 cursor-pointer hover:bg-white/5 transition-colors">
+                +8
+              </div>
+              <span class="text-[10px] text-gray-500 text-center">Lihat semua</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /film info -->
+
+
+      <!--  BOOKING SECTION  -->
+      <div class="p-6 rounded-2xl border border-cinema-border bg-cinema-card/80
+                  backdrop-blur-sm reveal" style="animation-delay:0.1s">
+
+        <div class="flex items-center gap-2 mb-6">
+          <div class="w-1 h-6 rounded-full bg-cinema-red"></div>
+          <h2 class="font-bold text-white text-lg">Jadwal Tayang</h2>
+        </div>
+
+        <!-- ① PILIH BIOSKOP  -->
+        <div class="mb-6">
+          <div class="section-label">
+            <span class="num">1</span>
+            <span class="title">Pilih Bioskop</span>
+          </div>
+          <div class="relative">
+            <select id="cinema-select" onchange="onCinemaChange()"
+                    class="w-full appearance-none bg-cinema-bg border border-cinema-border
+                           text-gray-300 text-sm px-4 pr-10 py-3 rounded-xl
+                           focus:outline-none focus:border-cinema-red/50
+                           cursor-pointer transition-colors">
+              <option value="">— Pilih bioskop —</option>
+              <option value="cgv-grand-indonesia">CGV Grand Indonesia</option>
+              <option value="xxi-fx">XXI FX Sudirman</option>
+              <option value="cinepolis-lippo">Cinepolis Lippo Mall</option>
+              <option value="imax-gandaria">IMAX Gandaria City</option>
+              <option value="cgv-central-park">CGV Central Park</option>
+            </select>
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+                 width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- ② PILIH TANGGAL  -->
+        <div class="mb-6" id="date-section">
+          <div class="section-label">
+            <span class="num">2</span>
+            <span class="title">Pilih Tanggal</span>
+          </div>
+          <div class="scroll-x gap-2 pb-1" id="date-buttons">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- ③ PILIH JAM  -->
+        <div class="mb-6" id="time-section">
+          <div class="section-label">
+            <span class="num">3</span>
+            <span class="title">Pilih Jam Tayang</span>
+          </div>
+
+          <!-- Studio selector tabs -->
+          <div class="flex gap-2 mb-4 scroll-x pb-1" id="studio-tabs">
+            <button onclick="setStudio(this, 'imax')"
+                    class="studio-tab px-3 py-1.5 rounded-lg text-xs font-bold
+                           border border-cinema-red/40 bg-cinema-red/10 text-cinema-red
+                           transition-all whitespace-nowrap">
+              IMAX 2D
+            </button>
+            <button onclick="setStudio(this, 'studio2d')"
+                    class="studio-tab px-3 py-1.5 rounded-lg text-xs font-bold
+                           border border-cinema-border bg-cinema-bg text-gray-400
+                           hover:border-white/20 hover:text-white
+                           transition-all whitespace-nowrap">
+              Studio 2D
+            </button>
+            <button onclick="setStudio(this, 'studio3d')"
+                    class="studio-tab px-3 py-1.5 rounded-lg text-xs font-bold
+                           border border-cinema-border bg-cinema-bg text-gray-400
+                           hover:border-white/20 hover:text-white
+                           transition-all whitespace-nowrap">
+              Studio 3D
+            </button>
+            <button onclick="setStudio(this, '4dx')"
+                    class="studio-tab px-3 py-1.5 rounded-lg text-xs font-bold
+                           border border-cinema-border bg-cinema-bg text-gray-400
+                           hover:border-white/20 hover:text-white
+                           transition-all whitespace-nowrap">
+              4DX
+            </button>
+          </div>
+
+          <!-- Time slots -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="time-buttons">
+            <!-- Rendered by JS -->
+          </div>
+
+          <!-- Seat availability legend -->
+          <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded bg-green-400/20 border border-green-400/40"></span>Banyak tersedia
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded bg-cinema-gold/20 border border-cinema-gold/40"></span>Hampir penuh
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded bg-white/5 border border-white/10"></span>Habis
+            </div>
+          </div>
+        </div>
+
+        <!--  Selection summary  -->
+        <div id="selection-summary"
+             class="mb-4 p-4 rounded-xl bg-cinema-bg border border-cinema-border
+                    text-sm opacity-0 transition-all duration-500"
+             style="max-height:0; overflow:hidden; padding-top:0; padding-bottom:0; margin-bottom:0;">
+          <div class="flex items-start gap-3">
+            <div class="mt-0.5 w-5 h-5 rounded-full bg-green-400/20 flex items-center justify-center shrink-0">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold text-white mb-0.5">Jadwal dipilih</p>
+              <p id="summary-text" class="text-gray-400 text-xs leading-relaxed"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Button -->
+        <button id="cta-btn" disabled onclick="goToSeatSelection()"
+                class="btn-cta w-full flex items-center justify-center gap-3
+                       bg-cinema-red text-white rounded-2xl
+                       disabled:bg-cinema-border disabled:text-gray-600">
+          <svg id="cta-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+            <path class="hidden" id="check-icon" d="M9 12l2 2 4-4"/>
+          </svg>
+          <span id="cta-text">Pilih kursi — lengkapi jadwal dulu</span>
+          <svg id="cta-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" class="opacity-0 transition-opacity duration-300">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+
+        <p class="text-center text-xs text-gray-600 mt-3">
+          Pilih bioskop, tanggal, dan jam untuk melanjutkan
+        </p>
+
+      </div><!-- /booking section -->
+
+
+      <!--  AUDIENCE SCORE  -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 reveal" style="animation-delay:0.15s">
+        <div class="p-5 rounded-2xl border border-cinema-border bg-cinema-card text-center">
+          <div class="relative inline-flex items-center justify-center mb-3">
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <circle cx="36" cy="36" r="28" fill="none" stroke="#1a1a2e" stroke-width="6"/>
+              <circle cx="36" cy="36" r="28" fill="none" stroke="#e63946" stroke-width="6"
+                      stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="24"
+                      class="progress-ring-circle" id="imdb-ring"/>
+            </svg>
+            <span class="absolute font-bold text-white text-base">8.7</span>
+          </div>
+          <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">IMDb Score</p>
+        </div>
+        <div class="p-5 rounded-2xl border border-cinema-border bg-cinema-card text-center">
+          <div class="relative inline-flex items-center justify-center mb-3">
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <circle cx="36" cy="36" r="28" fill="none" stroke="#1a1a2e" stroke-width="6"/>
+              <circle cx="36" cy="36" r="28" fill="none" stroke="#f4a261" stroke-width="6"
+                      stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="29"
+                      class="progress-ring-circle"/>
+            </svg>
+            <span class="absolute font-bold text-white text-base">74%</span>
+          </div>
+          <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Rotten Tomatoes</p>
+        </div>
+        <div class="p-5 rounded-2xl border border-cinema-border bg-cinema-card text-center">
+          <div class="relative inline-flex items-center justify-center mb-3">
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <circle cx="36" cy="36" r="28" fill="none" stroke="#1a1a2e" stroke-width="6"/>
+              <circle cx="36" cy="36" r="28" fill="none" stroke="#457b9d" stroke-width="6"
+                      stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="18"
+                      class="progress-ring-circle"/>
+            </svg>
+            <span class="absolute font-bold text-white text-base">9.0</span>
+          </div>
+          <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">User Score</p>
+        </div>
+      </div>
+
+
+      <!--  REVIEWS  -->
+      <div class="reveal" style="animation-delay:0.2s">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-white">Ulasan Penonton</h3>
+          <button class="text-xs text-cinema-red hover:text-red-400 transition-colors font-semibold">
+            Lihat semua →
+          </button>
+        </div>
+        <div class="space-y-3" id="reviews-list"></div>
+      </div>
+
+    </div><!-- /right -->
+  </div><!-- /grid -->
+
+
+  <!--  RELATED FILMS  -->
+  <div class="mt-16 reveal" style="animation-delay:0.25s">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="font-display text-3xl text-white">FILM SERUPA</h2>
+        <p class="text-gray-500 text-sm mt-0.5">Karena kamu suka Interstellar</p>
+      </div>
+      <a href="#" class="text-xs text-cinema-red hover:text-red-400 transition-colors font-semibold">
+        Lihat semua →
+      </a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4" id="related-grid"></div>
+  </div>
+
+</div><!-- /max-w container -->
+
+
+<!-- 
+     FOOTER
+ -->
+<footer class="mt-20 border-t border-cinema-border">
+  <div class="max-w-7xl mx-auto px-4 md:px-8 py-10">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-xl bg-cinema-red flex items-center justify-center">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="white">
+            <path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
+          </svg>
+        </div>
+        <span class="font-display text-xl text-white tracking-wider">CineTix</span>
+      </div>
+      <p class="text-xs text-gray-600">© 2025 CineTix. Hak cipta dilindungi undang-undang.</p>
+    </div>
+  </div>
+</footer>
+
+
+<!-- 
+     TRAILER MODAL
+ -->
+<div id="trailer-modal"
+     class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/90 backdrop-blur-sm"
+       onclick="closeTrailer()"></div>
+  <div class="relative w-full max-w-3xl z-10">
+    <button onclick="closeTrailer()"
+            class="absolute -top-10 right-0 text-gray-400 hover:text-white transition-colors flex items-center gap-1.5 text-sm">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+      Tutup
+    </button>
+    <div class="rounded-2xl overflow-hidden border border-cinema-border shadow-2xl"
+         style="aspect-ratio: 16/9; background: #0f0f1a;">
+      <div class="w-full h-full flex flex-col items-center justify-center gap-4">
+        <div class="w-20 h-20 rounded-full bg-cinema-red/20 border-2 border-cinema-red/40
+                    flex items-center justify-center cursor-pointer hover:bg-cinema-red/30 transition-colors">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#e63946"><polygon points="5,3 19,12 5,21"/></svg>
+        </div>
+        <p class="text-sm text-gray-500">Trailer Interstellar (2014)</p>
+        <p class="text-xs text-gray-600">Klik untuk memutar</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 
+     JAVASCRIPT
+ -->
+<script>
+
+/*  STATE  */
+const state = {
+  selectedCinema: null,
+  selectedDate:   null,
+  selectedTime:   null,
+  selectedStudio: 'imax',
+};
+
+/*  DUMMY DATA  */
+const MOVIE = {
+  id: 1,
+  category_id: 1,
+  venue_id: 1,
+  title: 'Interstellar',
+  slug: 'interstellar',
+  description: 'A team of explorers travel through a wormhole in space in an attempt to ensure humanity\'s survival.',
+  poster_url: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIE.jpg',
+  status: 'published',
+  min_price: 35000,
+  max_price: 85000,
+  start_at: '2025-04-29T10:00:00',
+  end_at:   '2025-05-31T23:59:00',
+};
+
+const SHOWTIMES = {
+  imax: [
+    { time: '10:00', seats: 87, total: 120, tag: 'pagi',  status: 'available' },
+    { time: '13:30', seats: 12, total: 120, tag: 'siang', status: 'limited' },
+    { time: '16:00', seats:  0, total: 120, tag: 'sore',  status: 'soldout' },
+    { time: '19:15', seats: 56, total: 120, tag: 'malam', status: 'available' },
+    { time: '21:45', seats: 98, total: 120, tag: 'malam', status: 'available' },
+  ],
+  studio2d: [
+    { time: '09:00', seats: 76, total: 100, tag: 'pagi',  status: 'available' },
+    { time: '11:30', seats: 31, total: 100, tag: 'pagi',  status: 'available' },
+    { time: '14:00', seats:  0, total: 100, tag: 'siang', status: 'soldout' },
+    { time: '16:30', seats:  9, total: 100, tag: 'sore',  status: 'limited' },
+    { time: '19:00', seats: 44, total: 100, tag: 'malam', status: 'available' },
+    { time: '21:30', seats: 88, total: 100, tag: 'malam', status: 'available' },
+  ],
+  studio3d: [
+    { time: '11:00', seats: 62, total: 90, tag: 'pagi',  status: 'available' },
+    { time: '14:30', seats: 18, total: 90, tag: 'siang', status: 'limited' },
+    { time: '18:00', seats:  0, total: 90, tag: 'malam', status: 'soldout' },
+    { time: '20:30', seats: 75, total: 90, tag: 'malam', status: 'available' },
+  ],
+  '4dx': [
+    { time: '13:00', seats: 44, total: 60, tag: 'siang', status: 'available' },
+    { time: '16:00', seats:  5, total: 60, tag: 'sore',  status: 'limited' },
+    { time: '20:00', seats: 52, total: 60, tag: 'malam', status: 'available' },
+  ],
+};
+
+const REVIEWS = [
+  { name: 'Rafi A.',   avatar: 'R', rating: 5, date: '2 hari lalu', text: 'Film terbaik yang pernah aku tonton! Visualnya luar biasa dan ceritanya bikin nangis.' },
+  { name: 'Siti N.',   avatar: 'S', rating: 5, date: '5 hari lalu', text: 'Hans Zimmer scorenya masterpiece. Nonton di IMAX beda levelnya, sangat recommended!' },
+  { name: 'Budi W.',   avatar: 'B', rating: 4, date: '1 minggu lalu', text: 'Cerita kompleks tapi sangat memuaskan. Christopher Nolan memang jenius.' },
+];
+
+const RELATED = [
+  { title: 'Inception',          genre: 'Sci-Fi',    rating: '8.8', price: 45000, img: 'https://image.tmdb.org/t/p/w300/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg' },
+  { title: 'The Dark Knight',    genre: 'Action',    rating: '9.0', price: 40000, img: 'https://image.tmdb.org/t/p/w300/qJ2tW6WMUDux911r6m7haRef0WH.jpg' },
+  { title: 'Oppenheimer',        genre: 'Biography', rating: '8.3', price: 55000, img: 'https://image.tmdb.org/t/p/w300/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg' },
+  { title: 'Arrival',            genre: 'Sci-Fi',    rating: '7.9', price: 35000, img: 'https://image.tmdb.org/t/p/w300/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg' },
+  { title: 'The Martian',        genre: 'Adventure', rating: '8.0', price: 38000, img: 'https://image.tmdb.org/t/p/w300/5BHuvQ6p9kfc091Z8RiFNhCwL4b.jpg' },
+];
+
+/*  DATES  */
+function generateDates() {
+  const days  = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const months= ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const dates = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    dates.push({
+      label: i === 0 ? 'Hari ini' : i === 1 ? 'Besok' : days[d.getDay()],
+      date: d.getDate(),
+      month: months[d.getMonth()],
+      full: d.toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long' }),
+      iso: d.toISOString().split('T')[0],
+    });
+  }
+  return dates;
+}
+
+function renderDates() {
+  const container = document.getElementById('date-buttons');
+  const dates = generateDates();
+  container.innerHTML = dates.map((d, i) => `
+    <button class="date-btn" onclick="selectDate(this, '${d.iso}', '${d.full}')" data-index="${i}">
+      <span class="day-label">${d.label}</span>
+      <span class="date-num">${d.date}</span>
+      <span class="month-label">${d.month}</span>
+      <span class="active-dot"></span>
+    </button>
+  `).join('');
+}
+
+function selectDate(btn, iso, fullDate) {
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.selectedDate = { iso, full: fullDate };
+  state.selectedTime = null;
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  checkCTA();
+}
+
+/*  CINEMA  */
+function onCinemaChange() {
+  const val = document.getElementById('cinema-select').value;
+  state.selectedCinema = val || null;
+  state.selectedDate   = null;
+  state.selectedTime   = null;
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  checkCTA();
+}
+
+/*  STUDIO TABS  */
+function setStudio(btn, studio) {
+  document.querySelectorAll('.studio-tab').forEach(b => {
+    b.classList.remove('border-cinema-red/40','bg-cinema-red/10','text-cinema-red');
+    b.classList.add('border-cinema-border','bg-cinema-bg','text-gray-400');
+  });
+  btn.classList.add('border-cinema-red/40','bg-cinema-red/10','text-cinema-red');
+  btn.classList.remove('border-cinema-border','bg-cinema-bg','text-gray-400');
+  state.selectedStudio = studio;
+  state.selectedTime   = null;
+  renderTimeSlots();
+  checkCTA();
+}
+
+/*  TIMES  */
+function renderTimeSlots() {
+  const container = document.getElementById('time-buttons');
+  const slots = SHOWTIMES[state.selectedStudio] || [];
+
+  container.innerHTML = slots.map(s => {
+    const pct     = Math.round((s.seats / s.total) * 100);
+    const isSold  = s.status === 'soldout';
+    const isLtd   = s.status === 'limited';
+    const tagText = isSold ? 'Habis' : isLtd ? 'Hampir penuh' : `${s.seats} kursi`;
+    const tagCls  = isSold ? '' : isLtd ? '' : 'green';
+    const soldCls = isSold ? 'sold-out' : '';
+    const seatColor = isSold ? 'bg-white/5 border-white/10' : isLtd ? 'bg-cinema-gold/20 border-cinema-gold/30' : 'bg-green-400/15 border-green-400/25';
+
+    return `
+      <button class="time-btn ${soldCls}" onclick="selectTime(this, '${s.time}')">
+        <div class="flex flex-col items-start gap-1.5 w-full">
+          <div class="flex items-center justify-between w-full">
+            <span class="font-bold text-base">${s.time}</span>
+            <span class="text-[9px] font-bold uppercase tracking-wider
+                         px-2 py-0.5 rounded-md ${isSold ? 'bg-white/5 text-gray-500' : isLtd ? 'bg-cinema-gold/15 text-cinema-gold' : 'bg-green-400/12 text-green-400'}">
+              ${tagText}
+            </span>
+          </div>
+          <div class="w-full h-1 rounded-full bg-white/5 overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-700 ${isSold ? 'bg-white/10' : isLtd ? 'bg-cinema-gold' : 'bg-green-400'}"
+                 style="width: ${isSold ? 100 : 100 - pct}%"></div>
+          </div>
+          <span class="text-[10px] text-gray-500 capitalize">${s.tag}</span>
+        </div>
+      </button>
+    `;
+  }).join('');
+}
+
+function selectTime(btn, time) {
+  if (btn.classList.contains('sold-out')) return;
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.selectedTime = time;
+  checkCTA();
+}
+
+/*  CTA  */
+function checkCTA() {
+  const btn      = document.getElementById('cta-btn');
+  const ctaText  = document.getElementById('cta-text');
+  const ctaArrow = document.getElementById('cta-arrow');
+  const summary  = document.getElementById('selection-summary');
+  const summaryTxt = document.getElementById('summary-text');
+  const { selectedDate, selectedTime, selectedCinema } = state;
+
+  const ready = selectedDate && selectedTime;
+
+  btn.disabled = !ready;
+
+  if (!selectedCinema) {
+    ctaText.textContent = 'Pilih kursi — pilih bioskop dulu';
+  } else if (!selectedDate && !selectedTime) {
+    ctaText.textContent = 'Pilih kursi — pilih tanggal & jam dulu';
+  } else if (!selectedDate) {
+    ctaText.textContent = 'Pilih kursi — pilih tanggal dulu';
+  } else if (!selectedTime) {
+    ctaText.textContent = 'Pilih kursi — pilih jam dulu';
+  } else {
+    ctaText.textContent = 'Pilih Kursi';
+  }
+
+  if (ready) {
+    ctaArrow.classList.remove('opacity-0');
+    ctaArrow.classList.add('opacity-100');
+
+    const cinema   = document.getElementById('cinema-select');
+    const cinemaName = cinema.options[cinema.selectedIndex]?.text || 'Bioskop dipilih';
+    const studioLabel = document.querySelector('.studio-tab.text-cinema-red')?.textContent?.trim() || state.selectedStudio;
+    summaryTxt.innerHTML = `
+      🎬 <strong class="text-gray-200">${cinemaName}</strong><br>
+      📅 ${selectedDate.full}<br>
+      🕐 ${selectedTime} · ${studioLabel}
+    `;
+    summary.style.maxHeight    = '120px';
+    summary.style.paddingTop   = '16px';
+    summary.style.paddingBottom= '16px';
+    summary.style.marginBottom = '16px';
+    summary.style.opacity      = '1';
+
+    // Save to localStorage
+    try {
+      localStorage.setItem('cinetix_booking', JSON.stringify({
+        movie: MOVIE.title,
+        cinema: cinemaName,
+        date: selectedDate.iso,
+        time: selectedTime,
+        studio: studioLabel,
+        savedAt: new Date().toISOString(),
+      }));
+    } catch(e) {}
+
+  } else {
+    ctaArrow.classList.add('opacity-0');
+    ctaArrow.classList.remove('opacity-100');
+    summary.style.maxHeight    = '0';
+    summary.style.paddingTop   = '0';
+    summary.style.paddingBottom= '0';
+    summary.style.marginBottom = '0';
+    summary.style.opacity      = '0';
+  }
+}
+
+/*  NAVIGATE  */
+function goToSeatSelection() {
+  if (!state.selectedDate || !state.selectedTime) return;
+
+  const btn = document.getElementById('cta-btn');
+  btn.innerHTML = `
+    <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+    </svg>
+    <span>Memuat halaman kursi...</span>
+  `;
+  btn.disabled = true;
+
+  setTimeout(() => {
+    const params = new URLSearchParams({
+      movie: MOVIE.slug,
+      date:  state.selectedDate.iso,
+      time:  state.selectedTime,
+      studio: state.selectedStudio,
+    });
+    // Navigate to seat selection page
+    alert(`✅ Navigasi ke: seat-selection.html?${params.toString()}\n\nDalam implementasi nyata, halaman pemilihan kursi akan terbuka.`);
+    // window.location.href = `seat-selection.html?${params.toString()}`;
+
+    // Reset button
+    btn.disabled = false;
+    btn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+      </svg>
+      <span>Pilih Kursi</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-100">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    `;
+  }, 1200);
+}
+
+/*  REVIEWS  */
+function renderReviews() {
+  const container = document.getElementById('reviews-list');
+  container.innerHTML = REVIEWS.map(r => `
+    <div class="p-4 rounded-xl border border-cinema-border bg-cinema-card/60 backdrop-blur-sm">
+      <div class="flex items-start gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cinema-red to-cinema-gold
+                    flex items-center justify-center text-sm font-bold text-white shrink-0">
+          ${r.avatar}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-semibold text-sm text-white">${r.name}</span>
+            <span class="text-xs text-gray-500">${r.date}</span>
+          </div>
+          <div class="flex items-center gap-0.5 mb-2">
+            ${Array.from({length: 5}, (_, i) => `
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="${i < r.rating ? '#f4a261' : '#374151'}">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            `).join('')}
+          </div>
+          <p class="text-xs text-gray-400 leading-relaxed">${r.text}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/*  RELATED  */
+function renderRelated() {
+  const grid = document.getElementById('related-grid');
+  grid.innerHTML = RELATED.map(m => `
+    <div class="related-card group cursor-pointer" onclick="this.classList.add('scale-95')">
+      <div class="relative rounded-xl overflow-hidden mb-3" style="aspect-ratio:2/3;">
+        <img src="${m.img}" alt="${m.title}"
+             class="related-poster w-full h-full object-cover"
+             onerror="this.src='https://placehold.co/200x300/0f0f1a/e2e8f0?text=${encodeURIComponent(m.title)}'"/>
+        <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent opacity-80"></div>
+        <!-- hover overlay -->
+        <div class="absolute inset-0 bg-cinema-red/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+          </div>
+        </div>
+        <div class="absolute top-2 right-2 flex items-center gap-1 px-2 py-1
+                    rounded-lg bg-black/60 backdrop-blur-sm text-xs font-bold text-cinema-gold">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          ${m.rating}
+        </div>
+        <div class="absolute bottom-2 left-2">
+          <span class="badge-genre bg-white/10 text-gray-300 backdrop-blur-sm">${m.genre}</span>
+        </div>
+      </div>
+      <h4 class="font-semibold text-sm text-white group-hover:text-cinema-red transition-colors leading-tight mb-1">
+        ${m.title}
+      </h4>
+      <p class="text-xs text-cinema-red font-semibold">
+        Rp ${m.price.toLocaleString('id-ID')}
+      </p>
+    </div>
+  `).join('');
+}
+
+/*  SYNOPSIS TOGGLE  */
+function toggleSynopsis() {
+  const text  = document.getElementById('synopsis-text');
+  const btn   = document.getElementById('synopsis-toggle');
+  const arrow = document.getElementById('synopsis-arrow');
+  const expanded = text.classList.toggle('expanded');
+  btn.childNodes[0].textContent = expanded ? 'Tutup ' : 'Baca selengkapnya ';
+  arrow.style.transform = expanded ? 'rotate(180deg)' : 'rotate(0deg)';
+  arrow.style.transition = 'transform 0.3s ease';
+}
+
+/*  TRAILER  */
+function openTrailer() {
+  const modal = document.getElementById('trailer-modal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+function closeTrailer() {
+  const modal = document.getElementById('trailer-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+/*  NAVBAR SCROLL  */
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 30);
+});
+
+/*  SCROLL REVEAL  */
+function initReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+        e.target.style.opacity    = '1';
+        e.target.style.transform  = 'translateY(0)';
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+}
+
+/*  MOBILE MENU  */
+function toggleMenu() {
+  document.getElementById('mobile-menu').classList.toggle('open');
+  document.getElementById('menu-overlay').classList.toggle('hidden');
+}
+
+/*  BTN GLOW EFFECT  */
+function initGlow() {
+  const btn = document.getElementById('cta-btn');
+  btn.addEventListener('mousemove', e => {
+    const r = btn.getBoundingClientRect();
+    btn.style.setProperty('--x', ((e.clientX - r.left) / r.width  * 100) + '%');
+    btn.style.setProperty('--y', ((e.clientY - r.top)  / r.height * 100) + '%');
+  });
+}
+
+/*  RESTORE LOCALSTORAGE  */
+function restoreState() {
+  try {
+    const saved = localStorage.getItem('cinetix_booking');
+    if (saved) {
+      const data = JSON.parse(saved);
+      // Could restore UI state here
+      console.log('Restored booking state:', data);
+    }
+  } catch(e) {}
+}
+
+/*  INIT  */
+document.addEventListener('DOMContentLoaded', () => {
+  renderDates();
+  renderTimeSlots();
+  renderReviews();
+  renderRelated();
+  initReveal();
+  initGlow();
+  restoreState();
+
+  // Staggered entrance animation
+  const poster = document.querySelector('.poster-wrap');
+  if (poster) {
+    poster.style.opacity   = '0';
+    poster.style.transform = 'translateY(32px)';
+    setTimeout(() => {
+      poster.style.transition = 'opacity 0.8s ease, transform 0.8s cubic-bezier(0.23,1,0.32,1)';
+      poster.style.opacity    = '1';
+      poster.style.transform  = 'translateY(0)';
+    }, 150);
+  }
+});
+</script>
+</body>
+</html>

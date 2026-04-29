@@ -21,3 +21,5 @@ $routes->group('', ['filter' => 'auth'], function ($routes) {
     $routes->get('/seat', 'SeatController::index');
     $routes->get('/', 'HomeController::index');
 });
+
+$routes->get('/dashboard', 'DashboardController::index');

@@ -1,3 +1,4 @@
+
 // ==================== VALIDATION HELPERS ====================
 
 function validateLoginEmail(email) {
@@ -118,3 +119,4 @@ async function handleLogin(e) {
         setLoading('loginBtn', 'loginSpinner', false);
     }
 }
+

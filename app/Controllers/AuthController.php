@@ -144,6 +144,7 @@ class AuthController extends BaseController
         return redirect()->to($authUrl);
     }
 
+
     public function googleCallback()
     {
         $code = $this->request->getGet('code');
@@ -193,7 +194,6 @@ class AuthController extends BaseController
             ]);
 
             session()->regenerate();
-
             return redirect()->to('/');
 
         } catch (\Exception $e) {

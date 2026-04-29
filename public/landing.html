@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineTix — Pesan Tiket Bioskop & Event</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Bebas Neue', 'cursive'],
+            body: ['DM Sans', 'sans-serif'],
+          },
+          colors: {
+            cinema: {
+              bg: '#080810',
+              card: '#0f0f1a',
+              border: '#1a1a2e',
+              red: '#e63946',
+              gold: '#f4a261',
+              blue: '#457b9d',
+            }
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 6s ease-in-out infinite',
+            'shimmer': 'shimmer 2s linear infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #080810;
+      font-family: 'DM Sans', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.3;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #080810; }
+    ::-webkit-scrollbar-thumb { background: #e63946; border-radius: 2px; }
+
+    .font-display { font-family: 'Bebas Neue', cursive; letter-spacing: 0.05em; }
+
+    /* Hero bg animated gradient */
+    .hero-bg {
+      background: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(230,57,70,0.15) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(69,123,157,0.1) 0%, transparent 60%),
+        #080810;
+    }
+
+    .hero-spotlight {
+      background: radial-gradient(circle at 50% 40%, rgba(230,57,70,0.08) 0%, transparent 60%);
+      position: absolute; inset: 0;
+    }
+
+    /* Film strip decorative */
+    .film-strip {
+      background: repeating-linear-gradient(
+        90deg,
+        transparent 0px, transparent 18px,
+        rgba(255,255,255,0.03) 18px, rgba(255,255,255,0.03) 20px
+      );
+    }
+
+    /* Card hover effects */
+    .movie-card {
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+    }
+    .movie-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 30px 60px -15px rgba(230,57,70,0.25);
+    }
+    .movie-card:hover .card-overlay { opacity: 1; }
+    .movie-card:hover .card-poster { transform: scale(1.08); }
+    .card-poster { transition: transform 0.6s ease; }
+    .card-overlay { 
+      opacity: 0; 
+      transition: opacity 0.3s ease;
+      background: linear-gradient(to top, rgba(230,57,70,0.9) 0%, rgba(8,8,16,0.4) 50%, transparent 100%);
+    }
+
+    /* Event card */
+    .event-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .event-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px -10px rgba(230,57,70,0.2);
+    }
+
+    /* Tab active */
+    .tab-btn.active {
+      color: #e63946;
+      border-bottom: 2px solid #e63946;
+    }
+
+    /* Gradient text */
+    .text-gradient {
+      background: linear-gradient(135deg, #e63946 0%, #f4a261 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Shimmer skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, #1a1a2e 25%, #252540 50%, #1a1a2e 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    /* Nav */
+    #navbar {
+      transition: background 0.3s ease, backdrop-filter 0.3s ease;
+    }
+    #navbar.scrolled {
+      background: rgba(8,8,16,0.95) !important;
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Scroll horizontal */
+    .scroll-container {
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      scroll-snap-type: x mandatory;
+    }
+    .scroll-container::-webkit-scrollbar { display: none; }
+    .scroll-item { scroll-snap-align: start; }
+
+    /* Pulse dot */
+    .pulse-dot {
+      animation: pulseDot 2s ease infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(230,57,70,0.6); }
+      50% { box-shadow: 0 0 0 6px rgba(230,57,70,0); }
+    }
+
+    /* Badge */
+    .badge-genre {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* Mobile menu */
+    #mobile-menu {
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.77, 0, 0.175, 1);
+    }
+    #mobile-menu.open { transform: translateX(0); }
+
+    /* How it works connector */
+    .step-connector {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(230,57,70,0.5), rgba(230,57,70,0.1));
+    }
+
+    /* Rating stars */
+    .stars { color: #f4a261; letter-spacing: -1px; }
+
+    /* Section reveal */
+    .reveal { opacity: 0; transform: translateY(30px); }
+
+    /* Ticket shape */
+    .ticket-shape {
+      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%, 20px 50%);
+    }
+
+    /* Glow button */
+    .btn-glow {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-glow::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.15), transparent 60%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .btn-glow:hover::after { opacity: 1; }
+
+    /* Category chip */
+    .cat-chip {
+      transition: all 0.25s ease;
+    }
+    .cat-chip:hover, .cat-chip.active {
+      background: #e63946;
+      color: white;
+      border-color: #e63946;
+    }
+
+    /* Animated counter */
+    .counter { font-variant-numeric: tabular-nums; }
+
+    /* Event tab content */
+    .tab-content { display: none; }
+    .tab-content.active { display: grid; }
+
+    @media (max-width: 768px) {
+      .tab-content.active { display: flex; flex-direction: column; }
+    }
+  </style>
+</head>
+
+<body class="bg-cinema-bg">
+
+  <!--  NAVBAR  -->
+  <nav id="navbar" class="fixed top-0 inset-x-0 z-50 bg-transparent">
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+      <div class="flex items-center justify-between h-16 md:h-20">
+
+        <!-- Logo -->
+        <a href="#hero" class="flex items-center gap-2 group">
+          <div class="relative">
+            <div class="w-9 h-9 bg-cinema-red rounded-lg flex items-center justify-center shadow-lg shadow-red-600/30 group-hover:scale-110 transition-transform duration-300">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m7 2 1.5 4.5M17 2l-1.5 4.5M3 6h18M3 6l1.5 12h15L21 6M10 10l2 4 2-4"/>
+              </svg>
+            </div>
+          </div>
+          <span class="font-display text-2xl text-white tracking-wide">Cine<span class="text-cinema-red">Tix</span></span>
+        </a>
+
+        <!-- Desktop Nav -->
+        <div class="hidden md:flex items-center gap-1">
+          <a href="#hero" class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-all">Home</a>
+          <a href="#movies" class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-all">Film</a>
+          <a href="#events" class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-all">Events</a>
+          <a href="#categories" class="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white rounded-lg hover:bg-white/5 transition-all">Kategori</a>
+        </div>
+
+        <!-- CTA -->
+        <div class="hidden md:flex items-center gap-3">
+          <button class="px-5 py-2 text-sm font-semibold text-white border border-white/15 rounded-lg hover:bg-white/5 transition-all">Masuk</button>
+          <button class="px-5 py-2 text-sm font-semibold text-white bg-cinema-red rounded-lg hover:bg-red-500 transition-all shadow-lg shadow-red-600/30 btn-glow">Daftar</button>
+        </div>
+
+        <!-- Mobile burger -->
+        <button id="burger-btn" class="md:hidden p-2 text-white" onclick="toggleMenu()">
+          <svg id="burger-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="fixed inset-y-0 right-0 z-[60] w-72 bg-cinema-card border-l border-cinema-border flex flex-col p-6">
+    <div class="flex items-center justify-between mb-8">
+      <span class="font-display text-2xl text-white">Cine<span class="text-cinema-red">Tix</span></span>
+      <button onclick="toggleMenu()" class="p-1.5 text-gray-400 hover:text-white">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <nav class="flex flex-col gap-1 flex-1">
+      <a href="#hero" onclick="toggleMenu()" class="px-4 py-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg font-medium transition-all">Home</a>
+      <a href="#movies" onclick="toggleMenu()" class="px-4 py-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg font-medium transition-all">Film</a>
+      <a href="#events" onclick="toggleMenu()" class="px-4 py-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg font-medium transition-all">Events</a>
+      <a href="#categories" onclick="toggleMenu()" class="px-4 py-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg font-medium transition-all">Kategori</a>
+    </nav>
+    <div class="flex flex-col gap-3">
+      <button class="w-full py-3 text-sm font-semibold text-white border border-white/15 rounded-lg hover:bg-white/5 transition-all">Masuk</button>
+      <button class="w-full py-3 text-sm font-semibold text-white bg-cinema-red rounded-lg hover:bg-red-500 transition-all">Daftar</button>
+    </div>
+  </div>
+  <div id="menu-overlay" class="fixed inset-0 z-[55] bg-black/60 hidden" onclick="toggleMenu()"></div>
+
+  <!--  HERO  -->
+  <section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden hero-bg">
+    <div class="hero-spotlight"></div>
+
+    <!-- Decorative film strips -->
+    <div class="absolute top-0 left-0 right-0 h-2 film-strip opacity-30"></div>
+    <div class="absolute bottom-0 left-0 right-0 h-2 film-strip opacity-30"></div>
+
+    <!-- Floating orbs -->
+    <div class="absolute top-1/4 left-1/6 w-64 h-64 rounded-full bg-red-600/5 blur-3xl animate-pulse-slow"></div>
+    <div class="absolute bottom-1/3 right-1/6 w-96 h-96 rounded-full bg-blue-600/5 blur-3xl animate-pulse-slow" style="animation-delay:1.5s"></div>
+
+    <div class="relative z-10 max-w-5xl mx-auto px-4 md:px-8 text-center pt-20">
+<!-- 
+      Live badge
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-600/10 border border-red-500/20 text-red-400 text-xs font-semibold mb-8 tracking-wider uppercase">
+        <span class="w-2 h-2 rounded-full bg-red-500 pulse-dot"></span>
+        Tayang Sekarang — Kursi Terbatas
+      </div> -->
+
+      <!-- Headline -->
+      <h1 class="font-display text-6xl md:text-8xl lg:text-[110px] text-white leading-none mb-6">
+        PESAN TIKET<br/>
+        <span class="text-gradient">BIOSKOP &amp; EVENT</span>
+      </h1>
+
+      <p class="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 font-light">
+        Film terbaru, konser, festival, dan pertunjukan hidup lainnya — semua dalam satu platform. Pesan dalam hitungan detik.
+      </p>
+
+      <!-- CTA buttons -->
+      <div class="flex flex-wrap items-center justify-center gap-4 mb-16">
+        <a href="#movies" class="inline-flex items-center gap-2 px-7 py-3.5 bg-cinema-red text-white font-semibold rounded-xl hover:bg-red-500 transition-all shadow-xl shadow-red-600/30 hover:shadow-red-500/40 hover:-translate-y-0.5 btn-glow">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Lihat Film
+        </a>
+        <a href="#events" class="inline-flex items-center gap-2 px-7 py-3.5 bg-white/5 text-white font-semibold rounded-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 backdrop-blur-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Explore Events
+        </a>
+      </div>
+
+      <!-- Stats -->
+      <div class="flex items-center justify-center gap-8 md:gap-16">
+        <div class="text-center">
+          <div class="font-display text-4xl md:text-5xl text-white counter" data-target="500">0</div>
+          <div class="text-xs text-gray-500 mt-1 uppercase tracking-widest">Film</div>
+        </div>
+        <div class="w-px h-10 bg-white/10"></div>
+        <div class="text-center">
+          <div class="font-display text-4xl md:text-5xl text-white counter" data-target="100">0</div>
+          <div class="text-xs text-gray-500 mt-1 uppercase tracking-widest">Bioskop</div>
+        </div>
+        <div class="w-px h-10 bg-white/10"></div>
+        <div class="text-center">
+          <div class="font-display text-4xl md:text-5xl text-white">1M<span class="text-cinema-red">+</span></div>
+          <div class="text-xs text-gray-500 mt-1 uppercase tracking-widest">Pengguna</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom fade -->
+    <div class="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-cinema-bg to-transparent"></div>
+
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-gray-600 text-xs">
+      <div class="w-px h-12 bg-gradient-to-b from-transparent via-gray-600 to-transparent animate-float"></div>
+      <span class="tracking-widest uppercase">Scroll</span>
+    </div>
+  </section>
+
+  <!--  NOW SHOWING  -->
+  <section id="movies" class="py-20 md:py-28 bg-cinema-bg">
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row items-start md:items-end justify-between mb-12 reveal">
+        <div>
+          <div class="inline-flex items-center gap-2 text-cinema-red text-xs font-semibold uppercase tracking-widest mb-3">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            Sedang Tayang
+          </div>
+          <h2 class="font-display text-5xl md:text-6xl text-white">NOW <span class="text-cinema-red">SHOWING</span></h2>
+        </div>
+        <a href="#" class="mt-4 md:mt-0 flex items-center gap-2 text-sm text-gray-400 hover:text-cinema-red transition-colors font-medium">
+          Lihat Semua
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="flex flex-wrap gap-2 mb-10 reveal">
+        <button class="cat-chip active px-4 py-1.5 rounded-full text-sm font-medium border border-cinema-border text-gray-300 bg-cinema-card transition-all" onclick="filterMovies('all', this)">Semua</button>
+        <button class="cat-chip px-4 py-1.5 rounded-full text-sm font-medium border border-cinema-border text-gray-300 bg-cinema-card transition-all" onclick="filterMovies('horror', this)">Horror</button>
+        <button class="cat-chip px-4 py-1.5 rounded-full text-sm font-medium border border-cinema-border text-gray-300 bg-cinema-card transition-all" onclick="filterMovies('action', this)">Action</button>
+        <button class="cat-chip px-4 py-1.5 rounded-full text-sm font-medium border border-cinema-border text-gray-300 bg-cinema-card transition-all" onclick="filterMovies('drama', this)">Drama</button>
+        <button class="cat-chip px-4 py-1.5 rounded-full text-sm font-medium border border-cinema-border text-gray-300 bg-cinema-card transition-all" onclick="filterMovies('scifi', this)">Sci-Fi</button>
+      </div>
+
+      <!-- Movie Grid -->
+      <div id="movie-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+
+        <!-- Card 1: Ghost in the Cell -->
+        <div class="movie-card relative rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border cursor-pointer group">
+          <div class="relative aspect-[2/3] overflow-hidden">
+            <img src="img/ghostinthecell.png" alt="Ghost in the Cell" class="card-poster w-full h-full object-cover" loading="lazy" />
+            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-4">
+              <button class="w-full py-2.5 bg-cinema-red text-white text-sm font-semibold rounded-xl hover:bg-red-500 transition-all mb-2">Pesan Tiket</button>
+              <div class="text-xs text-white/70 text-center">Seorang pria misterius terjebak dalam misteri yang lebih gelap...</div>
+            </div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-cinema-red text-white shadow-lg">HOT</div>
+            <div class="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-xs text-gray-300 border border-white/10">17+</div>
+            <div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-cinema-card to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">Ghost in the Cell</h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="text-xs font-semibold text-cinema-gold">7.8</span>
+                <span class="text-xs text-gray-600 ml-1">· 115 mnt</span>
+              </div>
+              <span class="text-xs font-bold text-white">Rp 50.000</span>
+            </div>
+            <div class="mt-2"><span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Thriller</span></div>
+          </div>
+        </div>
+
+        <!-- Card 2: Tiba Tiba Setan -->
+        <div class="movie-card relative rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border cursor-pointer group">
+          <div class="relative aspect-[2/3] overflow-hidden">
+            <img src="img/tibatibasetan.png" alt="Tiba Tiba Setan" class="card-poster w-full h-full object-cover" loading="lazy" />
+            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-4">
+              <button class="w-full py-2.5 bg-cinema-red text-white text-sm font-semibold rounded-xl hover:bg-red-500 transition-all mb-2">Pesan Tiket</button>
+              <div class="text-xs text-white/70 text-center">Teror datang tanpa peringatan, setan mengintai setiap sudut...</div>
+            </div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white shadow-lg">BARU</div>
+            <div class="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-xs text-gray-300 border border-white/10">17+</div>
+            <div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-cinema-card to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">Tiba Tiba Setan</h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="text-xs font-semibold text-cinema-gold">7.2</span>
+                <span class="text-xs text-gray-600 ml-1">· 98 mnt</span>
+              </div>
+              <span class="text-xs font-bold text-white">Rp 45.000</span>
+            </div>
+            <div class="mt-2"><span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Horror</span></div>
+          </div>
+        </div>
+
+        <!-- Card 3: Para Perasuk -->
+        <div class="movie-card relative rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border cursor-pointer group">
+          <div class="relative aspect-[2/3] overflow-hidden">
+            <img src="img/para-perasuk.webp" alt="Para Perasuk" class="card-poster w-full h-full object-cover" loading="lazy" />
+            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-4">
+              <button class="w-full py-2.5 bg-cinema-red text-white text-sm font-semibold rounded-xl hover:bg-red-500 transition-all mb-2">Pesan Tiket</button>
+              <div class="text-xs text-white/70 text-center">Satu per satu warga desa kerasukan, tidak ada yang bisa...</div>
+            </div>
+            <div class="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-xs text-gray-300 border border-white/10">17+</div>
+            <div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-cinema-card to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">Para Perasuk</h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="text-xs font-semibold text-cinema-gold">6.9</span>
+                <span class="text-xs text-gray-600 ml-1">· 102 mnt</span>
+              </div>
+              <span class="text-xs font-bold text-white">Rp 45.000</span>
+            </div>
+            <div class="mt-2"><span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Horror</span></div>
+          </div>
+        </div>
+
+        <!-- Card 4: The Mummy -->
+        <div class="movie-card relative rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border cursor-pointer group">
+          <div class="relative aspect-[2/3] overflow-hidden">
+            <img src="img/the-mummy.webp" alt="Lee Cronin's The Mummy" class="card-poster w-full h-full object-cover" loading="lazy" />
+            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-4">
+              <button class="w-full py-2.5 bg-cinema-red text-white text-sm font-semibold rounded-xl hover:bg-red-500 transition-all mb-2">Pesan Tiket</button>
+              <div class="text-xs text-white/70 text-center">Kutukan mumi bangkit kembali dalam versi teror terbaru...</div>
+            </div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-cinema-red text-white shadow-lg">HOT</div>
+            <div class="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-xs text-gray-300 border border-white/10">17+</div>
+            <div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-cinema-card to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">Lee Cronin's The Mummy</h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="text-xs font-semibold text-cinema-gold">7.5</span>
+                <span class="text-xs text-gray-600 ml-1">· 110 mnt</span>
+              </div>
+              <span class="text-xs font-bold text-white">Rp 55.000</span>
+            </div>
+            <div class="mt-2"><span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Horror</span></div>
+          </div>
+        </div>
+
+        <!-- Card 5: Ayah -->
+        <div class="movie-card relative rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border cursor-pointer group">
+          <div class="relative aspect-[2/3] overflow-hidden">
+            <img src="img/ayah.png" alt="Ayah, Ini Arahnya Kemana, Ya?" class="card-poster w-full h-full object-cover" loading="lazy" />
+            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-4">
+              <button class="w-full py-2.5 bg-cinema-red text-white text-sm font-semibold rounded-xl hover:bg-red-500 transition-all mb-2">Pesan Tiket</button>
+              <div class="text-xs text-white/70 text-center">Kisah perjalanan ayah dan anak menemukan makna kebersamaan...</div>
+            </div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-[#f4a261] text-black shadow-lg">FAVORIT</div>
+            <div class="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-xs text-gray-300 border border-white/10">SU</div>
+            <div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-cinema-card to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">Ayah, Ini Arahnya Kemana, Ya?</h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="text-xs font-semibold text-cinema-gold">8.1</span>
+                <span class="text-xs text-gray-600 ml-1">· 120 mnt</span>
+              </div>
+              <span class="text-xs font-bold text-white">Rp 50.000</span>
+            </div>
+            <div class="mt-2"><span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Drama</span></div>
+          </div>
+        </div>
+
+        <!-- Card 6: Project Hail Mary -->
+        <div class="movie-card relative rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border cursor-pointer group">
+          <div class="relative aspect-[2/3] overflow-hidden">
+            <img src="img/hailmary.png" alt="Project Hail Mary" class="card-poster w-full h-full object-cover" loading="lazy" />
+            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-4">
+              <button class="w-full py-2.5 bg-cinema-red text-white text-sm font-semibold rounded-xl hover:bg-red-500 transition-all mb-2">Pesan Tiket</button>
+              <div class="text-xs text-white/70 text-center">Seorang astronaut terbangun sendirian di luar angkasa...</div>
+            </div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-lg">TOP</div>
+            <div class="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-xs text-gray-300 border border-white/10">13+</div>
+            <div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-cinema-card to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">Project Hail Mary</h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="text-xs font-semibold text-cinema-gold">8.6</span>
+                <span class="text-xs text-gray-600 ml-1">· 135 mnt</span>
+              </div>
+              <span class="text-xs font-bold text-white">Rp 60.000</span>
+            </div>
+            <div class="mt-2"><span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Sci-Fi</span></div>
+          </div>
+        </div>
+
+        <!-- Card 7: Michael -->
+        <div class="movie-card relative rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border cursor-pointer group">
+          <div class="relative aspect-[2/3] overflow-hidden">
+            <img src="img/michael.webp" alt="Michael" class="card-poster w-full h-full object-cover" loading="lazy" />
+            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-4">
+              <button class="w-full py-2.5 bg-cinema-red text-white text-sm font-semibold rounded-xl hover:bg-red-500 transition-all mb-2">Pesan Tiket</button>
+              <div class="text-xs text-white/70 text-center">Kisah kehidupan legendaris sang raja pop dari masa kecil...</div>
+            </div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-yellow-600 text-white shadow-lg">EKSKLUSIF</div>
+            <div class="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-xs text-gray-300 border border-white/10">13+</div>
+            <div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-cinema-card to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">Michael</h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="text-xs font-semibold text-cinema-gold">7.9</span>
+                <span class="text-xs text-gray-600 ml-1">· 128 mnt</span>
+              </div>
+              <span class="text-xs font-bold text-white">Rp 55.000</span>
+            </div>
+            <div class="mt-2"><span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Biografi</span></div>
+          </div>
+        </div>
+
+        <!-- Card 8: Songko -->
+        <div class="movie-card relative rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border cursor-pointer group">
+          <div class="relative aspect-[2/3] overflow-hidden">
+            <img src="img/songko.webp" alt="Songko: Kisah Petaka dari Sulawesi" class="card-poster w-full h-full object-cover" loading="lazy" />
+            <div class="card-overlay absolute inset-0 flex flex-col justify-end p-4">
+              <button class="w-full py-2.5 bg-cinema-red text-white text-sm font-semibold rounded-xl hover:bg-red-500 transition-all mb-2">Pesan Tiket</button>
+              <div class="text-xs text-white/70 text-center">Legenda gelap Sulawesi hidup kembali dalam teror yang...</div>
+            </div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-700 text-white shadow-lg">LOKAL</div>
+            <div class="absolute top-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm text-xs text-gray-300 border border-white/10">17+</div>
+            <div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-cinema-card to-transparent"></div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2 mb-2">Songko: Kisah Petaka dari Sulawesi</h3>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f4a261"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="text-xs font-semibold text-cinema-gold">7.0</span>
+                <span class="text-xs text-gray-600 ml-1">· 108 mnt</span>
+              </div>
+              <span class="text-xs font-bold text-white">Rp 45.000</span>
+            </div>
+            <div class="mt-2"><span class="badge-genre bg-white/5 text-gray-400 border border-cinema-border">Horror</span></div>
+          </div>
+        </div>
+
+      </div><!-- /movie grid -->
+    </div>
+  </section>
+
+  <!--  UPCOMING  -->
+  <section class="py-20 bg-cinema-bg border-t border-cinema-border/50">
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+      <div class="flex items-end justify-between mb-10 reveal">
+        <div>
+          <div class="inline-flex items-center gap-2 text-cinema-gold text-xs font-semibold uppercase tracking-widest mb-3">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Segera Hadir
+          </div>
+          <h2 class="font-display text-5xl md:text-6xl text-white">COMING <span class="text-cinema-gold">SOON</span></h2>
+        </div>
+      </div>
+
+      <div class="scroll-container flex gap-4 pb-4">
+        <div class="flex gap-4 min-w-max">
+
+          <!-- Upcoming 1: Thunderbolts -->
+          <div class="scroll-item shrink-0 w-40 md:w-48 rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border movie-card cursor-pointer group">
+            <div class="relative aspect-[2/3] overflow-hidden">
+              <img src="img/thunderbolts.jpg" alt="Thunderbolts*" class="card-poster w-full h-full object-cover" loading="lazy" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+              <div class="absolute bottom-3 left-3 right-3">
+                <div class="text-xs font-bold text-cinema-red mb-1">📅 2 Mei 2026</div>
+              </div>
+            </div>
+            <div class="p-3">
+              <h4 class="font-semibold text-white text-xs leading-tight line-clamp-2 mb-1">Thunderbolts*</h4>
+              <span class="badge-genre bg-white/5 text-gray-500">Action</span>
+            </div>
+          </div>
+
+          <!-- Upcoming 2: Mission Impossible 8 -->
+          <div class="scroll-item shrink-0 w-40 md:w-48 rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border movie-card cursor-pointer group">
+            <div class="relative aspect-[2/3] overflow-hidden">
+              <img src="img/mission-impossible-8.jpg" alt="Mission: Impossible 8" class="card-poster w-full h-full object-cover" loading="lazy" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+              <div class="absolute bottom-3 left-3 right-3">
+                <div class="text-xs font-bold text-cinema-red mb-1">📅 23 Mei 2026</div>
+              </div>
+            </div>
+            <div class="p-3">
+              <h4 class="font-semibold text-white text-xs leading-tight line-clamp-2 mb-1">Mission: Impossible 8</h4>
+              <span class="badge-genre bg-white/5 text-gray-500">Action</span>
+            </div>
+          </div>
+
+          <!-- Upcoming 3: Jurassic World -->
+          <div class="scroll-item shrink-0 w-40 md:w-48 rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border movie-card cursor-pointer group">
+            <div class="relative aspect-[2/3] overflow-hidden">
+              <img src="img/jurassic-world-rebirth.jpg" alt="Jurassic World: Rebirth" class="card-poster w-full h-full object-cover" loading="lazy" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+              <div class="absolute bottom-3 left-3 right-3">
+                <div class="text-xs font-bold text-cinema-red mb-1">📅 2 Jul 2026</div>
+              </div>
+            </div>
+            <div class="p-3">
+              <h4 class="font-semibold text-white text-xs leading-tight line-clamp-2 mb-1">Jurassic World: Rebirth</h4>
+              <span class="badge-genre bg-white/5 text-gray-500">Sci-Fi</span>
+            </div>
+          </div>
+
+          <!-- Upcoming 4: Superman -->
+          <div class="scroll-item shrink-0 w-40 md:w-48 rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border movie-card cursor-pointer group">
+            <div class="relative aspect-[2/3] overflow-hidden">
+              <img src="img/superman.jpg" alt="Superman" class="card-poster w-full h-full object-cover" loading="lazy" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+              <div class="absolute bottom-3 left-3 right-3">
+                <div class="text-xs font-bold text-cinema-red mb-1">📅 11 Jul 2026</div>
+              </div>
+            </div>
+            <div class="p-3">
+              <h4 class="font-semibold text-white text-xs leading-tight line-clamp-2 mb-1">Superman</h4>
+              <span class="badge-genre bg-white/5 text-gray-500">Action</span>
+            </div>
+          </div>
+
+          <!-- Upcoming 5: Avatar -->
+          <div class="scroll-item shrink-0 w-40 md:w-48 rounded-2xl overflow-hidden bg-cinema-card border border-cinema-border movie-card cursor-pointer group">
+            <div class="relative aspect-[2/3] overflow-hidden">
+              <img src="img/avatar-fire-ash.jpg" alt="Avatar: Fire & Ash" class="card-poster w-full h-full object-cover" loading="lazy" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+              <div class="absolute bottom-3 left-3 right-3">
+                <div class="text-xs font-bold text-cinema-red mb-1">📅 19 Des 2025</div>
+              </div>
+            </div>
+            <div class="p-3">
+              <h4 class="font-semibold text-white text-xs leading-tight line-clamp-2 mb-1">Avatar: Fire &amp; Ash</h4>
+              <span class="badge-genre bg-white/5 text-gray-500">Sci-Fi</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  EVENTS  -->
+  <section id="events" class="py-20 md:py-28 bg-cinema-bg">
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+
+      <!-- Header -->
+      <div class="text-center mb-12 reveal">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold uppercase tracking-widest mb-5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          TIX Events
+        </div>
+        <h2 class="font-display text-5xl md:text-6xl text-white mb-4">EVENTS &amp; <span class="text-gradient">KONSER</span></h2>
+        <p class="text-gray-400 max-w-lg mx-auto">Konser musik, festival, pertunjukan seni, dan hiburan seru lainnya tersedia di sini.</p>
+      </div>
+
+      <!-- Event tabs -->
+      <div class="flex items-center gap-6 border-b border-cinema-border mb-10 overflow-x-auto pb-0 reveal">
+        <button class="tab-btn active pb-3 text-sm font-semibold whitespace-nowrap border-b-2 border-cinema-red text-cinema-red transition-all" onclick="showTab('concert', this)">Konser &amp; Musik</button>
+        <button class="tab-btn pb-3 text-sm font-semibold whitespace-nowrap text-gray-400 hover:text-white border-b-2 border-transparent transition-all" onclick="showTab('festival', this)">Festival</button>
+        <button class="tab-btn pb-3 text-sm font-semibold whitespace-nowrap text-gray-400 hover:text-white border-b-2 border-transparent transition-all" onclick="showTab('exhibition', this)">Pameran &amp; Seni</button>
+        <button class="tab-btn pb-3 text-sm font-semibold whitespace-nowrap text-gray-400 hover:text-white border-b-2 border-transparent transition-all" onclick="showTab('sport', this)">Olahraga</button>
+      </div>
+
+      <!-- TAB: Konser & Musik -->
+      <div id="tab-concert" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/art-jakarta-gardens.jpg" alt="Art Jakarta Gardens 2026" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-cinema-red text-white">TERLARIS</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🎨</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Pameran Seni</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">Art Jakarta Gardens 2026</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                9–11 Mei 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Hutan Kota GBK, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 150.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/michael-buble-jakarta.jpg" alt="Michael Bublé Live in Jakarta" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-orange-500 text-white">SEGERA</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🎤</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Konser</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">Michael Bublé Live in Jakarta</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                15 Jun 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Indonesia Arena, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 650.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/lalala-festival.jpg" alt="Lalala Festival 2026" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-600 text-white">ON SALE</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🎵</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Festival Musik</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">Lalala Festival 2026</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                26–27 Jul 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Stadion Utama GBK, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 450.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-concert -->
+
+      <!-- TAB: Festival -->
+      <div id="tab-festival" class="hidden grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/java-jazz-festival.jpg" alt="Java Jazz Festival 2026" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white">POPULER</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🎷</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Festival Jazz</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">Java Jazz Festival 2026</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                3–5 Apr 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                JIExpo Kemayoran, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 380.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/we-the-fest.jpg" alt="We The Fest 2026" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white">COMING SOON</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🎶</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Music Festival</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">We The Fest 2026</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                18–20 Jul 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                GBK Sports Complex, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 550.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/synchronize-festival.jpg" alt="Synchronize Festival" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🎸</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Indie Festival</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">Synchronize Festival</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                6–8 Okt 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Gambir Expo, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 300.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-festival -->
+
+      <!-- TAB: Pameran & Seni -->
+      <div id="tab-exhibition" class="hidden grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/immersive-van-gogh.jpg" alt="Immersive Van Gogh" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-cinema-red text-white">TERLARIS</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🖼️</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Pameran Seni</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">Immersive Van Gogh</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                Mei–Agustus 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Galeri Nasional, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 120.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/indonesian-comic-con.jpg" alt="Indonesian Comic Con 2026" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white">COMING SOON</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🦸</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Convention</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">Indonesian Comic Con 2026</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                4–5 Okt 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                ICE BSD City, Tangerang
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 200.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/pameran-seni-kontemporer.jpg" alt="Pameran Seni Kontemporer" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-600 text-white">BARU</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🎭</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Pameran</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">Pameran Seni Kontemporer</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                Jun–Jul 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Museum MACAN, Jakarta Barat
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 75.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-exhibition -->
+
+      <!-- TAB: Olahraga -->
+      <div id="tab-sport" class="hidden grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/bri-liga1-persija-persib.jpg" alt="BRI Liga 1: Persija vs Persib" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-cinema-red text-white">HOT</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">⚽</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Sepak Bola</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">BRI Liga 1: Persija vs Persib</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                10 Mei 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Stadion Patriot, Bekasi
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 85.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/bwf-super-series.jpg" alt="BWF Super Series Finals" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white">POPULER</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🏸</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Bulutangkis</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">BWF Super Series Finals</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                20–22 Jun 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Istora Senayan, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 250.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-card bg-cinema-card border border-cinema-border rounded-2xl overflow-hidden cursor-pointer group">
+          <div class="relative h-48 overflow-hidden">
+            <img src="img/nba-indonesia-tour.jpg" alt="NBA Games Indonesia Tour" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-cinema-card via-transparent to-transparent"></div>
+            <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold bg-orange-500 text-white">COMING SOON</div>
+            <div class="absolute top-3 right-3 w-10 h-10 rounded-xl bg-black/60 backdrop-blur-md flex items-center justify-center text-2xl">🏀</div>
+            <div class="absolute bottom-3 left-3"><span class="text-xs font-semibold text-gray-300 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">Basket</span></div>
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-white mb-3 leading-tight group-hover:text-cinema-red transition-colors">NBA Games Indonesia Tour</h3>
+            <div class="space-y-1.5 mb-4">
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                30 Jul 2026
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                Indonesia Arena, Jakarta
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-xs text-gray-500">Mulai dari</div><div class="font-bold text-white">Rp 500.000</div></div>
+              <button class="px-4 py-2 bg-cinema-red text-white text-xs font-semibold rounded-xl hover:bg-red-500 transition-all hover:-translate-y-0.5 shadow-lg shadow-red-600/20">Beli Tiket</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-sport -->
+
+      <!-- Load more -->
+      <div class="text-center mt-10">
+        <button class="inline-flex items-center gap-2 px-8 py-3 border border-cinema-border text-gray-300 hover:text-white hover:border-white/20 rounded-xl font-medium text-sm transition-all hover:bg-white/5">
+          Muat Lebih Banyak
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!--  CATEGORIES  -->
+  <section id="categories" class="py-20 md:py-28 bg-gradient-to-b from-cinema-bg to-cinema-card">
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+
+      <div class="text-center mb-12 reveal">
+        <div class="inline-flex items-center gap-2 text-sky-400 text-xs font-semibold uppercase tracking-widest mb-3">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Jelajahi
+        </div>
+        <h2 class="font-display text-5xl md:text-6xl text-white">BROWSE BY <span class="text-sky-400">GENRE</span></h2>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 reveal">
+        <div class="cat-card group relative rounded-2xl bg-cinema-card border border-cinema-border p-6 text-center cursor-pointer hover:border-red-500/30 transition-all duration-300 hover:-translate-y-1">
+          <div class="text-4xl mb-3">⚔️</div>
+          <div class="font-semibold text-white text-sm">Action</div>
+          <div class="text-xs text-gray-500 mt-1">42 Film</div>
+        </div>
+        <div class="cat-card group relative rounded-2xl bg-cinema-card border border-cinema-border p-6 text-center cursor-pointer hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1">
+          <div class="text-4xl mb-3">👻</div>
+          <div class="font-semibold text-white text-sm">Horror</div>
+          <div class="text-xs text-gray-500 mt-1">38 Film</div>
+        </div>
+        <div class="cat-card group relative rounded-2xl bg-cinema-card border border-cinema-border p-6 text-center cursor-pointer hover:border-yellow-500/30 transition-all duration-300 hover:-translate-y-1">
+          <div class="text-4xl mb-3">😂</div>
+          <div class="font-semibold text-white text-sm">Komedi</div>
+          <div class="text-xs text-gray-500 mt-1">29 Film</div>
+        </div>
+        <div class="cat-card group relative rounded-2xl bg-cinema-card border border-cinema-border p-6 text-center cursor-pointer hover:border-pink-500/30 transition-all duration-300 hover:-translate-y-1">
+          <div class="text-4xl mb-3">❤️</div>
+          <div class="font-semibold text-white text-sm">Romance</div>
+          <div class="text-xs text-gray-500 mt-1">21 Film</div>
+        </div>
+        <div class="cat-card group relative rounded-2xl bg-cinema-card border border-cinema-border p-6 text-center cursor-pointer hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-1">
+          <div class="text-4xl mb-3">🚀</div>
+          <div class="font-semibold text-white text-sm">Sci-Fi</div>
+          <div class="text-xs text-gray-500 mt-1">19 Film</div>
+        </div>
+        <div class="cat-card group relative rounded-2xl bg-cinema-card border border-cinema-border p-6 text-center cursor-pointer hover:border-gray-400/30 transition-all duration-300 hover:-translate-y-1">
+          <div class="text-4xl mb-3">🔍</div>
+          <div class="font-semibold text-white text-sm">Thriller</div>
+          <div class="text-xs text-gray-500 mt-1">24 Film</div>
+        </div>
+        <div class="cat-card group relative rounded-2xl bg-cinema-card border border-cinema-border p-6 text-center cursor-pointer hover:border-orange-500/30 transition-all duration-300 hover:-translate-y-1">
+          <div class="text-4xl mb-3">🧙</div>
+          <div class="font-semibold text-white text-sm">Fantasy</div>
+          <div class="text-xs text-gray-500 mt-1">16 Film</div>
+        </div>
+        <div class="cat-card group relative rounded-2xl bg-cinema-card border border-cinema-border p-6 text-center cursor-pointer hover:border-teal-500/30 transition-all duration-300 hover:-translate-y-1">
+          <div class="text-4xl mb-3">🎭</div>
+          <div class="font-semibold text-white text-sm">Drama</div>
+          <div class="text-xs text-gray-500 mt-1">33 Film</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  HOW IT WORKS  -->
+  <section class="py-20 bg-cinema-card">
+    <div class="max-w-5xl mx-auto px-4 md:px-8">
+      <div class="text-center mb-16 reveal">
+        <h2 class="font-display text-5xl md:text-6xl text-white">CARA <span class="text-cinema-red">PESAN</span></h2>
+        <p class="text-gray-400 mt-3">Mudah dan cepat dalam 4 langkah</p>
+      </div>
+      <div class="flex flex-col md:flex-row items-center gap-0 reveal">
+
+        <div class="flex-1 flex flex-col items-center text-center px-4">
+          <div class="w-16 h-16 rounded-2xl bg-cinema-red/10 border border-cinema-red/20 flex items-center justify-center mb-4 hover:bg-cinema-red/20 transition-all">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e63946" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-cinema-red flex items-center justify-center font-display text-white text-lg mb-3">1</div>
+          <h3 class="font-semibold text-white mb-2">Pilih Film</h3>
+          <p class="text-xs text-gray-500">Temukan film atau event favorit dari katalog lengkap kami</p>
+        </div>
+
+        <div class="hidden md:block step-connector my-4"></div>
+
+        <div class="flex-1 flex flex-col items-center text-center px-4 mt-8 md:mt-0">
+          <div class="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4 hover:bg-orange-500/20 transition-all">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f4a261" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center font-display text-white text-lg mb-3">2</div>
+          <h3 class="font-semibold text-white mb-2">Pilih Jadwal</h3>
+          <p class="text-xs text-gray-500">Tentukan tanggal dan waktu tayang yang sesuai</p>
+        </div>
+
+        <div class="hidden md:block step-connector my-4"></div>
+
+        <div class="flex-1 flex flex-col items-center text-center px-4 mt-8 md:mt-0">
+          <div class="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 hover:bg-blue-500/20 transition-all">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#457b9d" stroke-width="1.5"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-display text-white text-lg mb-3">3</div>
+          <h3 class="font-semibold text-white mb-2">Pilih Kursi</h3>
+          <p class="text-xs text-gray-500">Pilih kursi favorit dengan tampilan denah interaktif</p>
+        </div>
+
+        <div class="hidden md:block step-connector my-4"></div>
+
+        <div class="flex-1 flex flex-col items-center text-center px-4 mt-8 md:mt-0">
+          <div class="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-4 hover:bg-green-500/20 transition-all">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center font-display text-white text-lg mb-3">4</div>
+          <h3 class="font-semibold text-white mb-2">Bayar &amp; Nikmati</h3>
+          <p class="text-xs text-gray-500">Bayar dengan berbagai metode dan tunjukkan e-tiket</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  REVIEWS  -->
+  <section class="py-20 bg-cinema-bg">
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+      <div class="text-center mb-12 reveal">
+        <h2 class="font-display text-5xl md:text-6xl text-white">APA KATA <span class="text-cinema-gold">MEREKA</span></h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 reveal">
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 hover:border-white/10 transition-all">
+          <div class="stars text-lg mb-4">★★★★★</div>
+          <p class="text-gray-300 text-sm leading-relaxed mb-6">"Aplikasi paling gampang buat pesan tiket bioskop! Tampilannya keren, prosesnya cepat banget. Suka banget deh."</p>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-orange-400 flex items-center justify-center font-bold text-white text-sm">A</div>
+            <div>
+              <div class="text-sm font-semibold text-white">Arinda S.</div>
+              <div class="text-xs text-gray-500">Jakarta Selatan</div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 hover:border-white/10 transition-all">
+          <div class="stars text-lg mb-4">★★★★★</div>
+          <p class="text-gray-300 text-sm leading-relaxed mb-6">"Fitur event-nya top banget! Kemarin beli tiket konser lewat sini, lancar jaya. Rekomendasi banget buat yang suka hiburan."</p>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center font-bold text-white text-sm">R</div>
+            <div>
+              <div class="text-sm font-semibold text-white">Rizky M.</div>
+              <div class="text-xs text-gray-500">Bandung</div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-cinema-card border border-cinema-border rounded-2xl p-6 hover:border-white/10 transition-all">
+          <div class="stars text-lg mb-4">★★★★☆</div>
+          <p class="text-gray-300 text-sm leading-relaxed mb-6">"Pilihan bioskopnya banyak, harga juga kompetitif. Bayar pakai GoPay makin murah lagi. Pokoknya ga nyesel deh."</p>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-teal-400 flex items-center justify-center font-bold text-white text-sm">D</div>
+            <div>
+              <div class="text-sm font-semibold text-white">Dewi K.</div>
+              <div class="text-xs text-gray-500">Surabaya</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  CTA  -->
+  <section class="py-20 bg-cinema-card">
+    <div class="max-w-4xl mx-auto px-4 md:px-8 text-center reveal">
+      <div class="relative inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-cinema-red/10 border border-cinema-red/20 mb-8 animate-float">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#e63946" stroke-width="1.5"><path d="m7 2 1.5 4.5M17 2l-1.5 4.5M3 6h18M3 6l1.5 12h15L21 6M10 10l2 4 2-4"/></svg>
+      </div>
+      <h2 class="font-display text-5xl md:text-7xl text-white mb-6">MULAI <span class="text-gradient">NONTON</span><br/>SEKARANG</h2>
+      <p class="text-gray-400 text-lg mb-10 max-w-lg mx-auto">Download aplikasi CineTix dan nikmati kemudahan pesan tiket bioskop dan event favorit kamu.</p>
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <button class="inline-flex items-center gap-3 px-6 py-3.5 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 transition-all shadow-xl hover:-translate-y-0.5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.42c1.32.07 2.22.68 2.99.69.79-.02 1.65-.66 3-.66 1.62.02 2.83.78 3.57 2.1-3.22 1.97-2.66 6.21.96 7.42-.62 1.73-1.42 3.37-2.52 4.31zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+          App Store
+        </button>
+        <button class="inline-flex items-center gap-3 px-6 py-3.5 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 transition-all shadow-xl hover:-translate-y-0.5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m3.18 23.85 9.85-9.9-2.83-2.83-7.02 12.73zM21.34 9.59 18.5 7.98l-3.1 3.1 3.1 3.1 2.87-1.63c.82-.47.82-1.47-.03-1.96zM2.01.16C1.7.48 1.5 1 1.5 1.67v20.66c0 .67.2 1.19.51 1.51l.08.07 11.58-11.57v-.27L2.09.09l-.08.07zm13.67 14.07-2.83-2.83L2.01 24.09a1.58 1.58 0 0 0 2.04.06l11.63-9.92z"/></svg>
+          Google Play
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!--  FOOTER  -->
+  <footer class="bg-cinema-bg border-t border-cinema-border">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 py-14">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+
+        <div class="col-span-2 md:col-span-1">
+          <a href="#hero" class="flex items-center gap-2 mb-4">
+            <div class="w-9 h-9 bg-cinema-red rounded-lg flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="m7 2 1.5 4.5M17 2l-1.5 4.5M3 6h18M3 6l1.5 12h15L21 6M10 10l2 4 2-4"/></svg>
+            </div>
+            <span class="font-display text-2xl text-white">Cine<span class="text-cinema-red">Tix</span></span>
+          </a>
+          <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-6">Platform pemesanan tiket bioskop dan event terpercaya di Indonesia. Cepat, aman, dan mudah.</p>
+          <div class="flex items-center gap-3">
+            <a href="#" class="w-9 h-9 rounded-lg bg-white/5 border border-cinema-border flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            </a>
+            <a href="#" class="w-9 h-9 rounded-lg bg-white/5 border border-cinema-border flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.32 6.32 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.77 1.52V6.75a4.85 4.85 0 0 1-1-.06z"/></svg>
+            </a>
+            <a href="#" class="w-9 h-9 rounded-lg bg-white/5 border border-cinema-border flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-white uppercase tracking-widest mb-5">Quick Links</h4>
+          <ul class="space-y-3">
+            <li><a href="#hero" class="text-sm text-gray-500 hover:text-white transition-colors">Home</a></li>
+            <li><a href="#movies" class="text-sm text-gray-500 hover:text-white transition-colors">Film</a></li>
+            <li><a href="#events" class="text-sm text-gray-500 hover:text-white transition-colors">Events</a></li>
+            <li><a href="#categories" class="text-sm text-gray-500 hover:text-white transition-colors">Kategori</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-white uppercase tracking-widest mb-5">Genre</h4>
+          <ul class="space-y-3">
+            <li><a href="#" class="text-sm text-gray-500 hover:text-white transition-colors">Action</a></li>
+            <li><a href="#" class="text-sm text-gray-500 hover:text-white transition-colors">Horror</a></li>
+            <li><a href="#" class="text-sm text-gray-500 hover:text-white transition-colors">Komedi</a></li>
+            <li><a href="#" class="text-sm text-gray-500 hover:text-white transition-colors">Romance</a></li>
+            <li><a href="#" class="text-sm text-gray-500 hover:text-white transition-colors">Sci-Fi</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold text-white uppercase tracking-widest mb-5">Kontak</h4>
+          <ul class="space-y-3">
+            <li class="flex items-center gap-2 text-sm text-gray-500">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,4 12,13 2,4"/></svg>
+              hello@cinetix.id
+            </li>
+            <li class="flex items-center gap-2 text-sm text-gray-500">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.13 11.9 19.79 19.79 0 0 1 1.06 3.27 2 2 0 0 1 3.04 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              +62 21 1234 5678
+            </li>
+            <li class="flex items-start gap-2 text-sm text-gray-500">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mt-0.5 shrink-0"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Jakarta, Indonesia
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="pt-8 border-t border-cinema-border flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-xs text-gray-600">© 2026 CineTix. All rights reserved.</p>
+        <div class="flex items-center gap-4">
+          <a href="#" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Privacy Policy</a>
+          <a href="#" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!--  JAVASCRIPT  -->
+  <script>
+
+  //  EVENT TABS 
+  function showTab(tab, btn) {
+    // Hide all tab panels
+    ['concert','festival','exhibition','sport'].forEach(t => {
+      const el = document.getElementById('tab-' + t);
+      el.classList.add('hidden');
+      el.classList.remove('grid');
+    });
+    // Show selected
+    const active = document.getElementById('tab-' + tab);
+    active.classList.remove('hidden');
+    active.classList.add('grid');
+
+    // Update tab button styles
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active', 'text-cinema-red', 'border-cinema-red');
+      b.classList.add('text-gray-400', 'border-transparent');
+    });
+    btn.classList.add('active', 'text-cinema-red', 'border-cinema-red');
+    btn.classList.remove('text-gray-400', 'border-transparent');
+  }
+
+  //  MOVIE FILTER 
+  function filterMovies(genre, btn) {
+    document.querySelectorAll('.cat-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    document.querySelectorAll('#movie-grid > div').forEach(card => {
+      if (genre === 'all') {
+        card.style.display = '';
+      } else {
+        card.style.display = card.dataset.genre === genre ? '' : 'none';
+      }
+    });
+  }
+
+  //  NAVBAR SCROLL ─
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 30);
+  });
+
+  //  MOBILE MENU ─
+  function toggleMenu() {
+    document.getElementById('mobile-menu').classList.toggle('open');
+    document.getElementById('menu-overlay').classList.toggle('hidden');
+  }
+
+  //  SCROLL REVEAL ─
+  function initScrollReveal() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'translateY(0)';
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  }
+
+  //  COUNTER ANIMATION ─
+  function animateCounters() {
+    document.querySelectorAll('.counter').forEach(el => {
+      const target = +el.dataset.target;
+      let current = 0;
+      const step = target / 60;
+      const timer = setInterval(() => {
+        current += step;
+        if (current >= target) { current = target; clearInterval(timer); }
+        el.textContent = Math.floor(current) + '+';
+      }, 16);
+    });
+  }
+
+  const heroObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) { animateCounters(); heroObserver.disconnect(); }
+  });
+
+  //  BUTTON GLOW
+  document.querySelectorAll('.btn-glow').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const r = btn.getBoundingClientRect();
+      btn.style.setProperty('--x', ((e.clientX - r.left) / r.width * 100) + '%');
+      btn.style.setProperty('--y', ((e.clientY - r.top) / r.height * 100) + '%');
+    });
+  });
+
+  //  INIT 
+  document.addEventListener('DOMContentLoaded', () => {
+    initScrollReveal();
+    heroObserver.observe(document.getElementById('hero'));
+
+    // Add genre data attrs to movie cards for filter
+    const genreMap = [
+      'thriller','horror','horror','horror','drama','scifi','drama','horror'
+    ];
+    document.querySelectorAll('#movie-grid > div').forEach((card, i) => {
+      card.dataset.genre = genreMap[i] || 'all';
+    });
+  });
+  </script>
+</body>
+</html>
