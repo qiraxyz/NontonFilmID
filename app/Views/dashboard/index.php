@@ -1,7 +1,9 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('title') ?>Dashboard<?= $this->endSection() ?>
-
+<?= $this->section('styles') ?>
+    <link rel="stylesheet" href="<?= base_url('assets/css/dashboard.css') ?>">
+<?= $this->endSection() ?>
 <?= $this->section('content') ?>
 <section style="margin-bottom:28px;">
     <h1 id="greetingText" style="font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:var(--fg);line-height:1.2;">

@@ -12,5 +12,9 @@ class DashboardController extends BaseController
         return view('dashboard/index');
     }
 
+    public function detail()
+    {
+        return view('dashboard/film');
+    }
 }
 
