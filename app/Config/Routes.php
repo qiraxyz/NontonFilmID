@@ -23,3 +23,4 @@ $routes->group('', ['filter' => 'auth'], function ($routes) {
 });
 
 $routes->get('/dashboard', 'DashboardController::index');
+$routes->get('/dashboard-detail', 'DashboardController::detail');
